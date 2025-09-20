@@ -1,4 +1,5 @@
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { BorderRadius, Colors, Shadows, Spacing, Typography } from '@/constants/theme';
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -52,15 +53,15 @@ const mockPetLocations: PetLocation[] = [
     id: '4',
     title: 'Doggy Cafe',
     description: 'Pet-friendly cafe with outdoor seating',
-    coordinate: { latitude: 37.7869, longitude: -122.4104 },
+    coordinate: { latitude: 37.7859, longitude: -122.4064 },
     type: 'cafe',
-    rating: 4.5
+    rating: 4.4
   },
   {
     id: '5',
     title: 'Furry Friends Grooming',
     description: 'Professional pet grooming services',
-    coordinate: { latitude: 37.7839, longitude: -122.4064 },
+    coordinate: { latitude: 37.7839, longitude: -122.4104 },
     type: 'grooming',
     rating: 4.7
   }
@@ -73,7 +74,7 @@ const getMarkerColor = (type: PetLocation['type']) => {
     case 'store': return '#2196F3';
     case 'cafe': return '#FF9800';
     case 'grooming': return '#9C27B0';
-    default: return '#757575';
+    default: return '#4CAF50';
   }
 };
 
@@ -84,7 +85,7 @@ const getMarkerIcon = (type: PetLocation['type']) => {
     case 'store': return 'bag.fill';
     case 'cafe': return 'cup.and.saucer.fill';
     case 'grooming': return 'scissors';
-    default: return 'mappin';
+    default: return 'pawprint.fill';
   }
 };
 
@@ -172,20 +173,27 @@ export default function MapScreen() {
         ))}
       </MapView>
 
-      {/* Floating Wireframe Icon and EXP - Overlaying Map */}
-      <View style={styles.floatingHeader}>
+      {/* Floating Header with Profile and QR Code Buttons */}
+      <View style={styles.headerButtons}>
+        <TouchableOpacity
+          style={styles.profileButton}
+          onPress={() => router.push('/(tabs)/profile')}
+        >
+          <IconSymbol name="pawprint.fill" size={24} color="#4CAF50" />
+        </TouchableOpacity>
         <TouchableOpacity
           style={styles.wireframeButton}
           onPress={() => router.push('/scan-pet')}
         >
           <IconSymbol name="square.grid.3x3" size={24} color="#333" />
         </TouchableOpacity>
-        <View style={styles.expContainer}>
-          <Text style={styles.expLabel}>EXP</Text>
-          <View style={styles.expValue}>
-            <IconSymbol name="pawprint.fill" size={16} color="#4CAF50" />
-            <Text style={styles.expText}>240</Text>
-          </View>
+      </View>
+      
+      <View style={styles.expContainer}>
+        <Text style={styles.expLabel}>EXP</Text>
+        <View style={styles.expValue}>
+          <IconSymbol name="pawprint.fill" size={16} color="#4CAF50" />
+          <Text style={styles.expText}>240</Text>
         </View>
       </View>
 
@@ -243,12 +251,27 @@ const styles = StyleSheet.create({
   map: {
     flex: 1,
   },
-  floatingHeader: {
+  headerButtons: {
     position: 'absolute',
     top: 50,
     right: 20,
     zIndex: 10,
-    alignItems: 'flex-end',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  profileButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   wireframeButton: {
     width: 40,
@@ -257,7 +280,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -265,6 +287,10 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   expContainer: {
+    position: 'absolute',
+    top: 110,
+    right: 20,
+    zIndex: 10,
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -295,26 +321,31 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 2,
     borderColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
   locationCard: {
     position: 'absolute',
-    bottom: 100,
+    bottom: 20,
     left: 20,
     right: 20,
     backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: 12,
+    padding: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 15,
+    marginBottom: 12,
   },
   locationInfo: {
     flex: 1,
@@ -343,23 +374,28 @@ const styles = StyleSheet.create({
   ratingText: {
     fontSize: 14,
     color: '#666',
-    marginLeft: 4,
+    marginLeft: 8,
   },
   closeButton: {
-    padding: 4,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f5f5f5',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   cardActions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
   directionsButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#4CAF50',
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
     marginRight: 8,
     justifyContent: 'center',
   },
@@ -367,35 +403,39 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
-    marginLeft: 6,
+    marginLeft: 8,
   },
   callButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f5f5f5',
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
     marginRight: 8,
+    justifyContent: 'center',
   },
   callText: {
     color: '#4CAF50',
     fontSize: 14,
     fontWeight: '600',
-    marginLeft: 6,
+    marginLeft: 8,
   },
   saveButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f5f5f5',
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    justifyContent: 'center',
   },
   saveText: {
     color: '#666',
     fontSize: 14,
     fontWeight: '600',
-    marginLeft: 6,
+    marginLeft: 8,
   },
 });

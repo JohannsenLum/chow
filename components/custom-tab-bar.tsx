@@ -1,14 +1,14 @@
 import React from 'react';
 import { View, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { router, usePathname } from 'expo-router';
-import { IconSymbol } from '@/components/ui/icon-symbol';
+import { IconSymbol, SFSymbolName } from '@/components/ui/icon-symbol';
 
 const { width } = Dimensions.get('window');
 
 interface TabItem {
   name: string;
   title: string;
-  icon: string;
+  icon: SFSymbolName;
   route: string;
 }
 
@@ -31,7 +31,7 @@ export default function CustomTabBar() {
   const pathname = usePathname();
 
   const handleTabPress = (route: string) => {
-    router.push(route);
+    router.push(route as any);
   };
 
   const handleCenterPress = () => {

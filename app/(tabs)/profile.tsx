@@ -29,23 +29,11 @@ const mockUserPosts: UserPost[] = [
 ];
 
 export default function ProfileScreen() {
-    const [activeTab, setActiveTab] = useState<'posts' | 'saved'>('posts');
+    const [activeTab, setActiveTab] = useState<'posts' | 'achievements'>('posts');
 
     const renderPost = ({ item }: { item: UserPost }) => (
         <TouchableOpacity style={styles.postItem}>
             <Image source={{ uri: item.image }} style={styles.postImage} />
-            <View style={styles.postOverlay}>
-                <View style={styles.postStats}>
-                    <View style={styles.statItem}>
-                        <IconSymbol name="heart.fill" size={16} color="#fff" />
-                        <Text style={styles.statText}>{item.likes}</Text>
-                    </View>
-                    <View style={styles.statItem}>
-                        <IconSymbol name="message.fill" size={16} color="#fff" />
-                        <Text style={styles.statText}>{item.comments}</Text>
-                    </View>
-                </View>
-            </View>
         </TouchableOpacity>
     );
 
@@ -54,67 +42,61 @@ export default function ProfileScreen() {
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => router.back()}>
-                    <IconSymbol name="chevron.left" size={24} color="#333" />
+                    <IconSymbol name="xmark" size={24} color="#333" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Profile</Text>
-                <TouchableOpacity>
-                    <IconSymbol name="gearshape" size={24} color="#333" />
-                </TouchableOpacity>
+                <View style={styles.headerRight}>
+                    <TouchableOpacity>
+                        <IconSymbol name="gearshape" size={24} color="#333" />
+                    </TouchableOpacity>
+                    <Text style={styles.editCosmetics}>Edit Cosmetics</Text>
+                </View>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-                {/* Profile Info */}
-                <View style={styles.profileSection}>
+                {/* Profile Avatar Section */}
+                <View style={styles.avatarSection}>
                     <View style={styles.avatarContainer}>
+                        <View style={styles.avatarPlatform}>
+                            <View style={styles.avatarPlatformTop} />
+                            <View style={styles.avatarPlatformBottom} />
+                        </View>
                         <View style={styles.avatar}>
                             <Text style={styles.avatarEmoji}>🐕</Text>
                         </View>
-                        <TouchableOpacity style={styles.editAvatarButton}>
-                            <IconSymbol name="camera.fill" size={16} color="#fff" />
-                        </TouchableOpacity>
                     </View>
-
-                    <Text style={styles.userName}>Sarah & Luna</Text>
-                    <Text style={styles.userBio}>Dog mom �� | Adventure seeker | Luna's personal photographer 📸</Text>
-
-                    <View style={styles.statsContainer}>
-                        <View style={styles.statColumn}>
-                            <Text style={styles.statNumber}>127</Text>
-                            <Text style={styles.statLabel}>Posts</Text>
-                        </View>
-                        <View style={styles.statColumn}>
-                            <Text style={styles.statNumber}>1.2K</Text>
-                            <Text style={styles.statLabel}>Followers</Text>
-                        </View>
-                        <View style={styles.statColumn}>
-                            <Text style={styles.statNumber}>856</Text>
-                            <Text style={styles.statLabel}>Following</Text>
-                        </View>
-                    </View>
-
-                    <View style={styles.actionButtons}>
-                        <TouchableOpacity style={styles.editButton}>
-                            <Text style={styles.editButtonText}>Edit Profile</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.shareButton}>
-                            <IconSymbol name="square.and.arrow.up" size={20} color="#333" />
-                        </TouchableOpacity>
+                    
+                    {/* ROOKIE Level Banner */}
+                    <View style={styles.levelBanner}>
+                        <Text style={styles.levelText}>ROOKIE</Text>
+                        <Text style={styles.levelSubtext}>LEVEL 1</Text>
                     </View>
                 </View>
 
-                {/* Pet Info */}
-                <View style={styles.petSection}>
-                    <Text style={styles.sectionTitle}>My Pet</Text>
-                    <View style={styles.petCard}>
-                        <Image
-                            source={{ uri: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=100' }}
-                            style={styles.petImage}
-                        />
-                        <View style={styles.petInfo}>
-                            <Text style={styles.petName}>Luna</Text>
-                            <Text style={styles.petDetails}>Golden Retriever • 3 years old</Text>
-                            <Text style={styles.petDetails}>Loves: Fetch, Swimming, Treats</Text>
-                        </View>
+                {/* User Info */}
+                <View style={styles.userInfo}>
+                    <Text style={styles.userName}>Luna</Text>
+                    <Text style={styles.userBio}>Adventure-loving white golden retriever who loves exploring new parks and making friends!</Text>
+                </View>
+
+                {/* Stats Row */}
+                <View style={styles.statsRow}>
+                    <View style={styles.statItem}>
+                        <Text style={styles.statNumber}>34</Text>
+                        <Text style={styles.statLabel}>Followers</Text>
+                    </View>
+                    <View style={styles.statItem}>
+                        <Text style={styles.statNumber}>12</Text>
+                        <Text style={styles.statLabel}>Following</Text>
+                    </View>
+                    <View style={styles.statItem}>
+                        <IconSymbol name="pawprint.fill" size={16} color="#4CAF50" />
+                        <Text style={styles.statNumber}>245</Text>
+                        <Text style={styles.statLabel}>EXP</Text>
+                    </View>
+                    <View style={styles.statItem}>
+                        <Text style={styles.statNumber}>120</Text>
+                        <Text style={styles.statLabel}>PawPoints</Text>
                     </View>
                 </View>
 
@@ -124,21 +106,17 @@ export default function ProfileScreen() {
                         style={[styles.tab, activeTab === 'posts' && styles.activeTab]}
                         onPress={() => setActiveTab('posts')}
                     >
-                        <IconSymbol
-                            name="grid"
-                            size={20}
-                            color={activeTab === 'posts' ? '#4CAF50' : '#666'}
-                        />
+                        <Text style={[styles.tabText, activeTab === 'posts' && styles.activeTabText]}>
+                            Posts (6)
+                        </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                        style={[styles.tab, activeTab === 'saved' && styles.activeTab]}
-                        onPress={() => setActiveTab('saved')}
+                        style={[styles.tab, activeTab === 'achievements' && styles.activeTab]}
+                        onPress={() => setActiveTab('achievements')}
                     >
-                        <IconSymbol
-                            name="bookmark"
-                            size={20}
-                            color={activeTab === 'saved' ? '#4CAF50' : '#666'}
-                        />
+                        <Text style={[styles.tabText, activeTab === 'achievements' && styles.activeTabText]}>
+                            Achievements (3)
+                        </Text>
                     </TouchableOpacity>
                 </View>
 
@@ -175,43 +153,103 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         color: '#333',
     },
-    profileSection: {
+    headerRight: {
+        alignItems: 'flex-end',
+    },
+    editCosmetics: {
+        fontSize: 12,
+        color: '#666',
+        marginTop: 2,
+    },
+    avatarSection: {
         alignItems: 'center',
         paddingVertical: 30,
         paddingHorizontal: 20,
     },
     avatarContainer: {
         position: 'relative',
-        marginBottom: 15,
+        marginBottom: 20,
+    },
+    avatarPlatform: {
+        position: 'relative',
+        width: 120,
+        height: 40,
+        marginBottom: 10,
+    },
+    avatarPlatformTop: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 20,
+        backgroundColor: '#E0E0E0',
+        borderRadius: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    avatarPlatformBottom: {
+        position: 'absolute',
+        bottom: 0,
+        left: 10,
+        right: 10,
+        height: 20,
+        backgroundColor: '#D0D0D0',
+        borderRadius: 8,
     },
     avatar: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        backgroundColor: '#f5f5f5',
+        position: 'absolute',
+        top: -30,
+        left: 20,
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: '#FFF8DC',
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 3,
-        borderColor: '#4CAF50',
+        borderColor: '#FFD700',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 5,
     },
     avatarEmoji: {
-        fontSize: 40,
+        fontSize: 50,
     },
-    editAvatarButton: {
-        position: 'absolute',
-        bottom: 0,
-        right: 0,
-        width: 32,
-        height: 32,
-        borderRadius: 16,
+    levelBanner: {
         backgroundColor: '#4CAF50',
+        paddingHorizontal: 20,
+        paddingVertical: 8,
+        borderRadius: 20,
         alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 2,
-        borderColor: '#fff',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    levelText: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#fff',
+        letterSpacing: 1,
+    },
+    levelSubtext: {
+        fontSize: 12,
+        color: '#fff',
+        marginTop: 2,
+    },
+    userInfo: {
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        marginBottom: 20,
     },
     userName: {
-        fontSize: 24,
+        fontSize: 28,
         fontWeight: 'bold',
         color: '#333',
         marginBottom: 8,
@@ -220,19 +258,22 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#666',
         textAlign: 'center',
-        marginBottom: 20,
         lineHeight: 22,
+        paddingHorizontal: 20,
     },
-    statsContainer: {
+    statsRow: {
         flexDirection: 'row',
-        marginBottom: 25,
+        justifyContent: 'space-around',
+        paddingHorizontal: 20,
+        marginBottom: 30,
     },
-    statColumn: {
+    statItem: {
         alignItems: 'center',
-        marginHorizontal: 25,
+        flexDirection: 'row',
+        gap: 4,
     },
     statNumber: {
-        fontSize: 20,
+        fontSize: 18,
         fontWeight: 'bold',
         color: '#333',
     },
@@ -241,117 +282,44 @@ const styles = StyleSheet.create({
         color: '#666',
         marginTop: 2,
     },
-    actionButtons: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    editButton: {
-        backgroundColor: '#4CAF50',
-        paddingHorizontal: 30,
-        paddingVertical: 10,
-        borderRadius: 20,
-        marginRight: 15,
-    },
-    editButtonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: '600',
-    },
-    shareButton: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: '#f5f5f5',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    petSection: {
-        paddingHorizontal: 20,
-        paddingBottom: 20,
-    },
-    sectionTitle: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: '#333',
-        marginBottom: 15,
-    },
-    petCard: {
-        flexDirection: 'row',
-        backgroundColor: '#f8f8f8',
-        padding: 15,
-        borderRadius: 12,
-        alignItems: 'center',
-    },
-    petImage: {
-        width: 60,
-        height: 60,
-        borderRadius: 30,
-        marginRight: 15,
-    },
-    petInfo: {
-        flex: 1,
-    },
-    petName: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: '#333',
-        marginBottom: 4,
-    },
-    petDetails: {
-        fontSize: 14,
-        color: '#666',
-        marginBottom: 2,
-    },
     tabContainer: {
         flexDirection: 'row',
         borderTopWidth: 1,
         borderTopColor: '#f0f0f0',
+        marginBottom: 20,
     },
     tab: {
         flex: 1,
         alignItems: 'center',
         paddingVertical: 15,
+        backgroundColor: 'transparent',
     },
     activeTab: {
-        borderTopWidth: 2,
-        borderTopColor: '#4CAF50',
+        backgroundColor: '#E8F5E8',
+    },
+    tabText: {
+        fontSize: 16,
+        color: '#666',
+        fontWeight: '500',
+    },
+    activeTabText: {
+        color: '#4CAF50',
+        fontWeight: '600',
     },
     postsGrid: {
-        paddingTop: 1,
+        paddingHorizontal: 20,
+        paddingBottom: 20,
     },
     postItem: {
         flex: 1,
         aspectRatio: 1,
-        margin: 0.5,
-        position: 'relative',
+        margin: 1,
+        borderRadius: 8,
+        overflow: 'hidden',
     },
     postImage: {
         width: '100%',
         height: '100%',
+        borderRadius: 8,
     },
-    postOverlay: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.3)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        opacity: 0,
-    },
-    postStats: {
-        flexDirection: 'row',
-    },
-    statItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginHorizontal: 10,
-    },
-    statText: {
-        color: '#fff',
-        fontSize: 14,
-        fontWeight: '600',
-        marginLeft: 4,
-    },
-}); 
+});

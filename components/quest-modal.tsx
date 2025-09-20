@@ -10,6 +10,7 @@ import {
   ScrollView,
   SafeAreaView,
 } from 'react-native';
+import { Colors, Spacing, BorderRadius, Typography, Shadows } from '@/constants/theme';
 
 interface Quest {
   id: string;
@@ -108,7 +109,7 @@ export default function QuestModal({ visible, onClose }: QuestModalProps) {
         <View style={styles.header}>
           <Text style={styles.title}>Quests</Text>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <IconSymbol name="xmark" size={24} color="#000" />
+            <IconSymbol name="xmark" size={24} color={Colors.text} />
           </TouchableOpacity>
         </View>
 
@@ -145,94 +146,90 @@ export default function QuestModal({ visible, onClose }: QuestModalProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: Colors.backgroundSecondary,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#fff',
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.lg,
+    backgroundColor: Colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: Colors.borderLight,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#000',
+    fontSize: Typography.xxxl,
+    fontWeight: Typography.bold,
+    color: Colors.text,
   },
   closeButton: {
-    padding: 8,
+    padding: Spacing.sm,
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
-    marginHorizontal: 20,
-    marginTop: 20,
-    borderRadius: 12,
-    padding: 4,
+    backgroundColor: Colors.background,
+    marginHorizontal: Spacing.xl,
+    marginTop: Spacing.xl,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.xs,
   },
   tab: {
     flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: BorderRadius.md,
     alignItems: 'center',
   },
   activeTab: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: Colors.primary,
   },
   tabText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#666',
+    fontSize: Typography.md,
+    fontWeight: Typography.semibold,
+    color: Colors.textSecondary,
   },
   activeTabText: {
-    color: '#fff',
+    color: Colors.textInverse,
   },
   questList: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.xl,
   },
   questCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    backgroundColor: Colors.background,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.xl,
+    marginBottom: Spacing.lg,
+    ...Shadows.sm,
   },
   questHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
   questTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#000',
+    fontSize: Typography.lg,
+    fontWeight: Typography.bold,
+    color: Colors.text,
     flex: 1,
   },
   difficultyBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.lg,
   },
   difficultyText: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: Typography.xs,
+    fontWeight: Typography.semibold,
   },
   questDescription: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: Typography.sm,
+    color: Colors.textSecondary,
     lineHeight: 20,
-    marginBottom: 16,
+    marginBottom: Spacing.lg,
   },
   questFooter: {
     flexDirection: 'row',
@@ -244,20 +241,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   rewardText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#4CAF50',
-    marginRight: 4,
+    fontSize: Typography.md,
+    fontWeight: Typography.semibold,
+    color: Colors.primary,
+    marginRight: Spacing.xs,
   },
   startButton: {
-    backgroundColor: '#4CAF50',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.round,
   },
   startButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
+    color: Colors.textInverse,
+    fontSize: Typography.sm,
+    fontWeight: Typography.semibold,
   },
 });

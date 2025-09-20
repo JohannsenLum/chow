@@ -3,9 +3,9 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
 import QuestModal from '@/components/quest-modal';
-import { Colors } from '@/constants/theme';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { BorderRadius, Colors, Shadows, Spacing, Typography } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function TabLayout() {
@@ -25,7 +25,7 @@ export default function TabLayout() {
     <View style={styles.container}>
       <Tabs
         screenOptions={{
-          tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+          tabBarActiveTintColor: Colors.primary,
           headerShown: false,
           tabBarButton: HapticTab,
           tabBarStyle: {
@@ -36,21 +36,21 @@ export default function TabLayout() {
           name="marketplace"
           options={{
             title: 'Marketplace',
-            tabBarIcon: ({ color }) => <IconSymbol size={24} name="bag.fill" color="#fff" />,
+            tabBarIcon: ({ color }) => <IconSymbol size={24} name="bag.fill" color={Colors.textInverse} />,
           }}
         />
         <Tabs.Screen
           name="index"
           options={{
             title: 'Map',
-            tabBarIcon: ({ color }) => <IconSymbol size={32} name="map.fill" color="#fff" />,
+            tabBarIcon: ({ color }) => <IconSymbol size={32} name="map.fill" color={Colors.textInverse} />,
           }}
         />
         <Tabs.Screen
           name="profile"
           options={{
             title: 'Quests',
-            tabBarIcon: ({ color }) => <IconSymbol size={24} name="list.bullet" color="#fff" />,
+            tabBarIcon: ({ color }) => <IconSymbol size={24} name="list.bullet" color={Colors.textInverse} />,
           }}
         />
       </Tabs>
@@ -65,7 +65,7 @@ export default function TabLayout() {
           <IconSymbol
             name="bag.fill"
             size={24}
-            color={pathname === '/(tabs)/marketplace' ? '#4CAF50' : '#fff'}
+            color={pathname === '/(tabs)/marketplace' ? Colors.primary : Colors.textInverse}
           />
           <Text style={[styles.tabLabel, pathname === '/(tabs)/marketplace' && styles.activeTabLabel]}>
             Marketplace
@@ -83,7 +83,7 @@ export default function TabLayout() {
           <IconSymbol
             name="list.bullet"
             size={24}
-            color={pathname === '/(tabs)/profile' ? '#4CAF50' : '#fff'}
+            color={pathname === '/(tabs)/profile' ? Colors.primary : Colors.textInverse}
           />
           <Text style={[styles.tabLabel, pathname === '/(tabs)/profile' && styles.activeTabLabel]}>
             Quests
@@ -97,7 +97,7 @@ export default function TabLayout() {
           activeOpacity={0.8}
         >
           <View style={styles.avatarCircle}>
-            <IconSymbol name="person.circle.fill" size={50} color="#4CAF50" />
+            <IconSymbol name="person.circle.fill" size={50} color={Colors.primary} />
           </View>
           <View style={styles.avatarLabel}>
             {/* <Text style={styles.avatarLabelText}>ROOKIE</Text> */}
@@ -117,47 +117,43 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: '#2D5A5A',
+    backgroundColor: Colors.primaryDark,
     height: 80,
-    paddingBottom: 20,
-    paddingTop: 10,
-    paddingHorizontal: 20,
+    paddingBottom: Spacing.xl,
+    paddingTop: Spacing.sm,
+    paddingHorizontal: Spacing.xl,
     alignItems: 'center',
     position: 'relative',
   },
   tab: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
+    paddingVertical: Spacing.sm,
   },
   leftTab: {
     flex: 0.4, // 40%
-
   },
   centerSpace: {
     flex: 0.5, // 20% - reserved space for the floating avatar
-
   },
   rightTab: {
     flex: 0.4, // 40%
-
   },
   activeTab: {
     // Add any active state styling if needed
   },
   tabLabel: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '500',
-    marginTop: 4,
+    color: Colors.textInverse,
+    fontSize: Typography.xs,
+    fontWeight: Typography.medium,
+    marginTop: Spacing.xs,
   },
   activeTabLabel: {
-    color: '#4CAF50',
+    color: Colors.primary,
   },
   centerButton: {
     position: 'absolute',
     left: '45%',
-    //marginLeft: -10,
     bottom: 30,
     alignItems: 'center',
     zIndex: 10,
@@ -166,16 +162,12 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#4CAF50',
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 4,
-    borderColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    borderColor: Colors.background,
+    ...Shadows.lg,
   },
   avatarLabel: {
     position: 'absolute',
@@ -183,13 +175,13 @@ const styles = StyleSheet.create({
     left: '50%',
     marginLeft: -25,
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    paddingHorizontal: 8,
+    paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
-    borderRadius: 8,
+    borderRadius: BorderRadius.md,
   },
   avatarLabelText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
+    color: Colors.textInverse,
+    fontSize: Typography.xs,
+    fontWeight: Typography.semibold,
   },
 });
