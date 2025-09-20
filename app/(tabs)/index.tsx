@@ -1,16 +1,16 @@
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { BorderRadius, Colors, Shadows, Spacing, Typography } from '@/constants/theme';
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   StyleSheet,
   Text,
   TouchableOpacity,
   View
 } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 
 interface PetLocation {
   id: string;
@@ -27,43 +27,67 @@ interface PetLocation {
 const mockPetLocations: PetLocation[] = [
   {
     id: '1',
-    title: 'Central Dog Park',
-    description: 'Large off-leash area with agility course',
-    coordinate: { latitude: 37.7849, longitude: -122.4094 },
+    title: 'Serangoon Central Dog Run',
+    description: 'Large fenced dog run with agility equipment',
+    coordinate: { latitude: 1.3502, longitude: 103.8729 },
     type: 'park',
-    rating: 4.8
-  },
-  {
-    id: '2',
-    title: 'Pet Paradise Store',
-    description: 'Premium pet supplies and accessories',
-    coordinate: { latitude: 37.7849, longitude: -122.4074 },
-    type: 'store',
     rating: 4.6
   },
   {
-    id: '3',
-    title: 'Paws & Claws Vet',
-    description: '24/7 emergency veterinary care',
-    coordinate: { latitude: 37.7829, longitude: -122.4084 },
-    type: 'vet',
-    rating: 4.9
-  },
-  {
-    id: '4',
-    title: 'Doggy Cafe',
-    description: 'Pet-friendly cafe with outdoor seating',
-    coordinate: { latitude: 37.7859, longitude: -122.4064 },
-    type: 'cafe',
+    id: '2',
+    title: 'Pet Lovers Centre - Serangoon',
+    description: 'Premium pet supplies and accessories',
+    coordinate: { latitude: 1.3508, longitude: 103.8735 },
+    type: 'store',
     rating: 4.4
   },
   {
+    id: '3',
+    title: 'Mount Pleasant Animal Hospital',
+    description: '24/7 emergency veterinary care',
+    coordinate: { latitude: 1.3515, longitude: 103.8742 },
+    type: 'vet',
+    rating: 4.8
+  },
+  {
+    id: '4',
+    title: 'Paws & Pans Cafe',
+    description: 'Pet-friendly cafe with outdoor seating',
+    coordinate: { latitude: 1.3498, longitude: 103.8721 },
+    type: 'cafe',
+    rating: 4.3
+  },
+  {
     id: '5',
-    title: 'Furry Friends Grooming',
+    title: 'Furry Friends Grooming Studio',
     description: 'Professional pet grooming services',
-    coordinate: { latitude: 37.7839, longitude: -122.4104 },
+    coordinate: { latitude: 1.3505, longitude: 103.8738 },
     type: 'grooming',
     rating: 4.7
+  },
+  {
+    id: '6',
+    title: 'Hougang Dog Park',
+    description: 'Community dog park with separate areas for small and large dogs',
+    coordinate: { latitude: 1.3521, longitude: 103.8755 },
+    type: 'park',
+    rating: 4.5
+  },
+  {
+    id: '7',
+    title: 'Pet Station - Nex Mall',
+    description: 'Pet supplies and accessories in shopping mall',
+    coordinate: { latitude: 1.3489, longitude: 103.8712 },
+    type: 'store',
+    rating: 4.2
+  },
+  {
+    id: '8',
+    title: 'Animal Clinic & Surgery',
+    description: 'General veterinary services and consultations',
+    coordinate: { latitude: 1.3518, longitude: 103.8748 },
+    type: 'vet',
+    rating: 4.6
   }
 ];
 
@@ -92,19 +116,78 @@ const getMarkerIcon = (type: PetLocation['type']) => {
 export default function MapScreen() {
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<PetLocation | null>(null);
+  const [locationLoading, setLocationLoading] = useState(true);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [mapRegion, setMapRegion] = useState<Region>({
+    latitude: 1.3502, // Singapore Serangoon Central coordinates as fallback
+    longitude: 103.8729,
+    latitudeDelta: 0.01,
+    longitudeDelta: 0.01,
+  });
+
+  const mapRef = useRef<MapView>(null);
 
   useEffect(() => {
-    (async () => {
+    getCurrentLocation();
+  }, []);
+
+  const getCurrentLocation = async () => {
+    try {
+      setLocationLoading(true);
+      setLocationError(null);
+      console.log('📍 Getting current location...');
+
+      // Request location permissions
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission denied', 'Permission to access location was denied');
+        setLocationError('Location permission denied');
+        console.log('❌ Location permission denied');
+        Alert.alert(
+          'Location Permission Required',
+          'Please enable location access to discover pet-friendly places near you.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Settings', onPress: () => Location.requestForegroundPermissionsAsync() }
+          ]
+        );
         return;
       }
 
-      let location = await Location.getCurrentPositionAsync({});
-      setLocation(location);
-    })();
-  }, []);
+      // Get current position with high accuracy
+      const locationResult = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+        timeInterval: 10000,
+      });
+
+      console.log(' Current location:', locationResult.coords.latitude, locationResult.coords.longitude);
+      setLocation(locationResult);
+
+      // Update map region to user's location INSTANTLY
+      const newRegion = {
+        latitude: locationResult.coords.latitude,
+        longitude: locationResult.coords.longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      };
+
+      // Set the region state
+      setMapRegion(newRegion);
+
+      // Animate to the new region instantly (no animation)
+      if (mapRef.current) {
+        mapRef.current.animateToRegion(newRegion, 0); // 0ms = instant
+      }
+
+      console.log('️ Map region updated to user location');
+
+    } catch (error) {
+      console.error('❌ Error getting location:', error);
+      setLocationError('Failed to get location');
+      Alert.alert('Location Error', 'Unable to get your current location. Please try again.');
+    } finally {
+      setLocationLoading(false);
+    }
+  };
 
   const handleMarkerPress = (petLocation: PetLocation) => {
     setSelectedLocation(petLocation);
@@ -120,21 +203,41 @@ export default function MapScreen() {
     }
   };
 
+  const handleMyLocationPress = () => {
+    if (location) {
+      const newRegion = {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      };
+
+      // Update state
+      setMapRegion(newRegion);
+
+      // Animate instantly to user location
+      if (mapRef.current) {
+        mapRef.current.animateToRegion(newRegion, 0); // 0ms = instant
+      }
+
+      console.log('📍 Centering map on user location');
+    } else {
+      getCurrentLocation();
+    }
+  };
+
   return (
     <View style={styles.container}>
       {/* Map - Full Screen */}
       <MapView
+        ref={mapRef}
         style={styles.map}
         provider={PROVIDER_GOOGLE}
-        initialRegion={{
-          latitude: location?.coords.latitude || 37.7849,
-          longitude: location?.coords.longitude || -122.4094,
-          latitudeDelta: 0.01,
-          longitudeDelta: 0.01,
-        }}
+        initialRegion={mapRegion}
         showsUserLocation={true}
         showsMyLocationButton={false}
         mapType="standard"
+        followsUserLocation={false} // Disable auto-follow to prevent conflicts
         customMapStyle={[
           {
             featureType: "landscape",
@@ -173,6 +276,25 @@ export default function MapScreen() {
         ))}
       </MapView>
 
+      {/* Location Loading Indicator */}
+      {locationLoading && (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="small" color="#4CAF50" />
+          <Text style={styles.loadingText}>Getting your location...</Text>
+        </View>
+      )}
+
+      {/* Location Error */}
+      {locationError && (
+        <View style={styles.errorContainer}>
+          <IconSymbol name="location.slash" size={20} color="#F44336" />
+          <Text style={styles.errorText}>{locationError}</Text>
+          <TouchableOpacity onPress={getCurrentLocation} style={styles.retryButton}>
+            <Text style={styles.retryText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Floating Header with Profile and QR Code Buttons */}
       <View style={styles.headerButtons}>
         <TouchableOpacity
@@ -188,7 +310,15 @@ export default function MapScreen() {
           <IconSymbol name="square.grid.3x3" size={24} color="#333" />
         </TouchableOpacity>
       </View>
-      
+
+      {/* My Location Button */}
+      <TouchableOpacity
+        style={styles.myLocationButton}
+        onPress={handleMyLocationPress}
+      >
+        <IconSymbol name="location.fill" size={24} color="#4CAF50" />
+      </TouchableOpacity>
+
       <View style={styles.expContainer}>
         <Text style={styles.expLabel}>EXP</Text>
         <View style={styles.expValue}>
@@ -250,6 +380,69 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
+  },
+  loadingContainer: {
+    position: 'absolute',
+    top: 100,
+    left: 20,
+    right: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    padding: 12,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  loadingText: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: '#333',
+  },
+  errorContainer: {
+    position: 'absolute',
+    top: 100,
+    left: 20,
+    right: 20,
+    backgroundColor: 'rgba(244, 67, 54, 0.1)',
+    padding: 12,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  errorText: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 14,
+    color: '#F44336',
+  },
+  retryButton: {
+    backgroundColor: '#F44336',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 4,
+  },
+  retryText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  myLocationButton: {
+    position: 'absolute',
+    bottom: 30, // Moved to bottom right
+    right: 20,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    zIndex: 10,
   },
   headerButtons: {
     position: 'absolute',
