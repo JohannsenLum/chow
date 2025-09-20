@@ -1,8 +1,10 @@
 import { IconSymbol, SFSymbolName } from '@/components/ui/icon-symbol';
 import { BorderRadius, Colors, Shadows, Spacing, Typography } from '@/constants/theme';
+import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
+    ActivityIndicator,
     Image,
     SafeAreaView,
     ScrollView,
@@ -18,81 +20,81 @@ interface Vendor {
     name: string;
     description: string;
     rating: number;
-    distance: string;
-    image: string;
+    distance_km: number;
+    image_url: string;
     category: 'food' | 'services' | 'retail';
+    address?: string;
+    phone?: string;
+    email?: string;
+    website?: string;
+    latitude?: number;
+    longitude?: number;
 }
 
-const mockVendors: Vendor[] = [
-    {
-        id: '1',
-        name: 'Crunchy...',
-        description: 'Customisable Food Products',
-        rating: 5.0,
-        distance: '1.8 km',
-        image: 'https://images.unsplash.com/photo-1589924691995-400dc9ecc119?w=200',
-        category: 'food'
-    },
-    {
-        id: '2',
-        name: 'Kohepets',
-        description: 'Pet store for food, treats and essentials',
-        rating: 4.8,
-        distance: '2.5 km',
-        image: 'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=200',
-        category: 'food'
-    },
-    {
-        id: '3',
-        name: 'Pet\'s Gal...',
-        description: 'Cat Grooming Specialist',
-        rating: 4.9,
-        distance: '750m',
-        image: 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=200',
-        category: 'services'
-    },
-    {
-        id: '4',
-        name: 'Wheeky...',
-        description: 'Pet Groomer, 10+ years in business',
-        rating: 4.9,
-        distance: '2.5 km',
-        image: 'https://images.unsplash.com/photo-1545249390-6bdfa286032f?w=200',
-        category: 'services'
-    },
-    {
-        id: '5',
-        name: 'PET TO DDHouse...',
-        description: 'Pet supplies store',
-        rating: 5.0,
-        distance: '2.1km',
-        image: 'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=200',
-        category: 'retail'
-    },
-    {
-        id: '6',
-        name: 'SG Pet...',
-        description: 'Affordable selection of Pet Accessories, Food and Toys',
-        rating: 4.9,
-        distance: '7.8km',
-        image: 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=200',
-        category: 'retail'
-    }
-];
-
 export default function MarketplaceScreen() {
-    const [selectedCategory, setSelectedCategory] = useState<'food' | 'services' | 'retail'>('food');
+    const [selectedCategory, setSelectedCategory] = useState<'all' | 'food' | 'services' | 'retail'>('all');
     const [searchQuery, setSearchQuery] = useState('');
+    const [vendors, setVendors] = useState<Vendor[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    const filteredVendors = mockVendors.filter(vendor =>
-        vendor.category === selectedCategory &&
-        vendor.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    useEffect(() => {
+        loadVendors();
+    }, []);
+
+    const loadVendors = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            const { data, error } = await supabase
+                .from('vendors')
+                .select('*')
+                .eq('is_active', true)
+                .order('rating', { ascending: false });
+
+            if (error) {
+                console.error('Error loading vendors:', error);
+                setError('Failed to load vendors');
+                return;
+            }
+
+            setVendors(data || []);
+        } catch (err) {
+            console.error('Error loading vendors:', err);
+            setError('Failed to load vendors');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Filter vendors based on selected category and search query
+    const filteredVendors = vendors.filter(vendor => {
+        const matchesCategory = selectedCategory === 'all' || vendor.category === selectedCategory;
+        const matchesSearch = vendor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            vendor.description.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesCategory && matchesSearch;
+    });
+
+    const handleBackPress = () => {
+        router.push('/');
+    };
+
+    const formatDistance = (distanceKm: number) => {
+        if (distanceKm < 1) {
+            return `${Math.round(distanceKm * 1000)}m`;
+        }
+        return `${distanceKm}km`;
+    };
 
     const renderVendorCard = (vendor: Vendor) => (
         <TouchableOpacity key={vendor.id} style={styles.vendorCard}>
             <View style={styles.vendorImageContainer}>
-                <Image source={{ uri: vendor.image }} style={styles.vendorImage} />
+                <Image
+                    source={{ uri: vendor.image_url }}
+                    style={styles.vendorImage}
+                    onError={() => console.log('Image load error for vendor:', vendor.name)}
+                />
             </View>
             <View style={styles.vendorInfo}>
                 <Text style={styles.vendorName}>{vendor.name}</Text>
@@ -104,7 +106,7 @@ export default function MarketplaceScreen() {
                     </View>
                     <View style={styles.distanceContainer}>
                         <IconSymbol name="location.fill" size={14} color={Colors.textSecondary} />
-                        <Text style={styles.distanceText}>{vendor.distance}</Text>
+                        <Text style={styles.distanceText}>{formatDistance(vendor.distance_km)}</Text>
                     </View>
                 </View>
             </View>
@@ -115,7 +117,7 @@ export default function MarketplaceScreen() {
     );
 
     const renderCategorySection = (category: 'food' | 'services' | 'retail', title: string, icon: SFSymbolName) => {
-        const vendors = mockVendors.filter(vendor => vendor.category === category);
+        const categoryVendors = vendors.filter(vendor => vendor.category === category);
 
         return (
             <View style={styles.categorySection}>
@@ -124,17 +126,60 @@ export default function MarketplaceScreen() {
                     <Text style={styles.categoryTitle}>{title}</Text>
                 </View>
                 <View style={styles.vendorGrid}>
-                    {vendors.map(renderVendorCard)}
+                    {categoryVendors.map(renderVendorCard)}
                 </View>
             </View>
         );
     };
 
+    if (loading) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={handleBackPress}>
+                        <IconSymbol name="xmark" size={24} color={Colors.text} />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>Pet Marketplace</Text>
+                    <View style={styles.pawPointsContainer}>
+                        <Text style={styles.pawPointsText}>120 PawPoints</Text>
+                    </View>
+                </View>
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color={Colors.primary} />
+                    <Text style={styles.loadingText}>Loading vendors...</Text>
+                </View>
+            </SafeAreaView>
+        );
+    }
+
+    if (error) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={handleBackPress}>
+                        <IconSymbol name="xmark" size={24} color={Colors.text} />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>Pet Marketplace</Text>
+                    <View style={styles.pawPointsContainer}>
+                        <Text style={styles.pawPointsText}>120 PawPoints</Text>
+                    </View>
+                </View>
+                <View style={styles.errorContainer}>
+                    <IconSymbol name="exclamationmark.triangle" size={40} color={Colors.textSecondary} />
+                    <Text style={styles.errorText}>{error}</Text>
+                    <TouchableOpacity style={styles.retryButton} onPress={loadVendors}>
+                        <Text style={styles.retryButtonText}>Retry</Text>
+                    </TouchableOpacity>
+                </View>
+            </SafeAreaView>
+        );
+    }
+
     return (
         <SafeAreaView style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()}>
+                <TouchableOpacity onPress={handleBackPress}>
                     <IconSymbol name="xmark" size={24} color={Colors.text} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Pet Marketplace</Text>
@@ -161,6 +206,21 @@ export default function MarketplaceScreen() {
                     <Text style={styles.categoriesTitle}>Categories</Text>
                 </View>
                 <View style={styles.categoryButtons}>
+                    <TouchableOpacity
+                        style={[
+                            styles.categoryButton,
+                            selectedCategory === 'all' && styles.categoryButtonActive
+                        ]}
+                        onPress={() => setSelectedCategory('all')}
+                    >
+                        <IconSymbol name="grid" size={20} color={selectedCategory === 'all' ? Colors.textInverse : Colors.primary} />
+                        <Text style={[
+                            styles.categoryButtonText,
+                            selectedCategory === 'all' && styles.categoryButtonTextActive
+                        ]}>
+                            All
+                        </Text>
+                    </TouchableOpacity>
                     <TouchableOpacity
                         style={[
                             styles.categoryButton,
@@ -191,14 +251,68 @@ export default function MarketplaceScreen() {
                             Services
                         </Text>
                     </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[
+                            styles.categoryButton,
+                            selectedCategory === 'retail' && styles.categoryButtonActive
+                        ]}
+                        onPress={() => setSelectedCategory('retail')}
+                    >
+                        <IconSymbol name="cart.fill" size={20} color={selectedCategory === 'retail' ? Colors.textInverse : Colors.primary} />
+                        <Text style={[
+                            styles.categoryButtonText,
+                            selectedCategory === 'retail' && styles.categoryButtonTextActive
+                        ]}>
+                            Retail
+                        </Text>
+                    </TouchableOpacity>
                 </View>
             </View>
 
-            {/* Content */}
+            {/* Content - Show filtered results */}
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-                {renderCategorySection('food', 'Food & Treats', 'pawprint.fill')}
-                {renderCategorySection('services', 'Services', 'scissors')}
-                {renderCategorySection('retail', 'Retail', 'cart.fill')}
+                {searchQuery ? (
+                    // Show search results
+                    <View style={styles.searchResultsSection}>
+                        <View style={styles.searchResultsHeader}>
+                            <IconSymbol name="magnifyingglass" size={20} color={Colors.textInverse} />
+                            <Text style={styles.searchResultsTitle}>
+                                Search Results ({filteredVendors.length})
+                            </Text>
+                        </View>
+                        <View style={styles.vendorGrid}>
+                            {filteredVendors.map(renderVendorCard)}
+                        </View>
+                        {filteredVendors.length === 0 && (
+                            <View style={styles.noResultsContainer}>
+                                <IconSymbol name="magnifyingglass" size={40} color={Colors.textSecondary} />
+                                <Text style={styles.noResultsText}>No results found</Text>
+                                <Text style={styles.noResultsSubtext}>Try a different search term</Text>
+                            </View>
+                        )}
+                    </View>
+                ) : selectedCategory === 'all' ? (
+                    // Show all vendors when "All" is selected
+                    <View style={styles.allVendorsSection}>
+                        <View style={styles.allVendorsHeader}>
+                            <IconSymbol name="grid" size={20} color={Colors.textInverse} />
+                            <Text style={styles.allVendorsTitle}>
+                                All Vendors ({vendors.length})
+                            </Text>
+                        </View>
+                        <View style={styles.vendorGrid}>
+                            {vendors.map(renderVendorCard)}
+                        </View>
+                    </View>
+                ) : (
+                    // Show specific category
+                    renderCategorySection(selectedCategory,
+                        selectedCategory === 'food' ? 'Food & Treats' :
+                            selectedCategory === 'services' ? 'Services' : 'Retail',
+                        selectedCategory === 'food' ? 'pawprint.fill' :
+                            selectedCategory === 'services' ? 'scissors' : 'cart.fill'
+                    )
+                )}
             </ScrollView>
         </SafeAreaView>
     );
@@ -232,6 +346,40 @@ const styles = StyleSheet.create({
     pawPointsText: {
         color: Colors.textInverse,
         fontSize: Typography.sm,
+        fontWeight: Typography.semibold,
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    loadingText: {
+        marginTop: Spacing.md,
+        fontSize: Typography.md,
+        color: Colors.textSecondary,
+    },
+    errorContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: Spacing.xl,
+    },
+    errorText: {
+        fontSize: Typography.md,
+        color: Colors.textSecondary,
+        marginTop: Spacing.md,
+        textAlign: 'center',
+    },
+    retryButton: {
+        backgroundColor: Colors.primary,
+        paddingHorizontal: Spacing.lg,
+        paddingVertical: Spacing.md,
+        borderRadius: BorderRadius.lg,
+        marginTop: Spacing.md,
+    },
+    retryButtonText: {
+        color: Colors.textInverse,
+        fontSize: Typography.md,
         fontWeight: Typography.semibold,
     },
     searchContainer: {
@@ -268,14 +416,14 @@ const styles = StyleSheet.create({
     categoryButtons: {
         flexDirection: 'row',
         paddingHorizontal: Spacing.xl,
-        gap: Spacing.md,
+        gap: Spacing.sm,
     },
     categoryButton: {
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: Colors.background,
-        paddingHorizontal: Spacing.lg,
-        paddingVertical: Spacing.md,
+        paddingHorizontal: Spacing.md,
+        paddingVertical: Spacing.sm,
         borderRadius: BorderRadius.round,
         borderWidth: 1,
         borderColor: Colors.border,
@@ -286,16 +434,51 @@ const styles = StyleSheet.create({
         borderColor: Colors.primary,
     },
     categoryButtonText: {
-        fontSize: Typography.sm,
+        fontSize: Typography.xs,
         fontWeight: Typography.semibold,
         color: Colors.primary,
-        marginLeft: Spacing.sm,
+        marginLeft: Spacing.xs,
     },
     categoryButtonTextActive: {
         color: Colors.textInverse,
     },
     content: {
         flex: 1,
+    },
+    searchResultsSection: {
+        marginBottom: Spacing.xxl,
+    },
+    searchResultsHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: Colors.primary,
+        paddingHorizontal: Spacing.xl,
+        paddingVertical: Spacing.md,
+        marginHorizontal: Spacing.xl,
+        borderRadius: BorderRadius.lg,
+        marginBottom: Spacing.md,
+    },
+    searchResultsTitle: {
+        color: Colors.textInverse,
+        fontSize: Typography.md,
+        fontWeight: Typography.semibold,
+        marginLeft: Spacing.sm,
+    },
+    noResultsContainer: {
+        alignItems: 'center',
+        paddingVertical: Spacing.xxl,
+        paddingHorizontal: Spacing.xl,
+    },
+    noResultsText: {
+        fontSize: Typography.lg,
+        fontWeight: Typography.semibold,
+        color: Colors.text,
+        marginTop: Spacing.md,
+    },
+    noResultsSubtext: {
+        fontSize: Typography.sm,
+        color: Colors.textSecondary,
+        marginTop: Spacing.xs,
     },
     categorySection: {
         marginBottom: Spacing.xxl,
@@ -384,5 +567,24 @@ const styles = StyleSheet.create({
         top: Spacing.sm,
         right: Spacing.sm,
         padding: Spacing.xs,
+    },
+    allVendorsSection: {
+        marginBottom: Spacing.xxl,
+    },
+    allVendorsHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: Colors.primary,
+        paddingHorizontal: Spacing.xl,
+        paddingVertical: Spacing.md,
+        marginHorizontal: Spacing.xl,
+        borderRadius: BorderRadius.lg,
+        marginBottom: Spacing.md,
+    },
+    allVendorsTitle: {
+        color: Colors.textInverse,
+        fontSize: Typography.md,
+        fontWeight: Typography.semibold,
+        marginLeft: Spacing.sm,
     },
 });

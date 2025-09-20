@@ -1,10 +1,13 @@
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { useAuth } from '@/lib/auth-context';
+import { supabase } from '@/lib/supabase';
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -22,6 +25,14 @@ interface PetLocation {
   };
   type: 'park' | 'vet' | 'store' | 'cafe' | 'grooming';
   rating: number;
+}
+
+interface UserProfile {
+  id: string;
+  display_name: string;
+  avatar_url: string | null;
+  exp_points: number;
+  level: number;
 }
 
 const mockPetLocations: PetLocation[] = [
@@ -113,11 +124,22 @@ const getMarkerIcon = (type: PetLocation['type']) => {
   }
 };
 
+const getLevelName = (level: number) => {
+  if (level <= 1) return 'ROOKIE';
+  if (level <= 5) return 'EXPLORER';
+  if (level <= 10) return 'ADVENTURER';
+  if (level <= 20) return 'CHAMPION';
+  return 'LEGEND';
+};
+
 export default function MapScreen() {
+  const { user } = useAuth();
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<PetLocation | null>(null);
   const [locationLoading, setLocationLoading] = useState(true);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
   const [mapRegion, setMapRegion] = useState<Region>({
     latitude: 1.3502, // Singapore Serangoon Central coordinates as fallback
     longitude: 103.8729,
@@ -129,7 +151,45 @@ export default function MapScreen() {
 
   useEffect(() => {
     getCurrentLocation();
-  }, []);
+    loadUserProfile();
+  }, [user]);
+
+  const loadUserProfile = async () => {
+    try {
+      setProfileLoading(true);
+
+      if (!user) {
+        console.error('No authenticated user found');
+        return;
+      }
+
+      // Fetch user profile from database
+      const { data: userProfile, error } = await supabase
+        .from('users')
+        .select(`
+          id,
+          display_name,
+          avatar_url,
+          exp_points,
+          level
+        `)
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching user profile:', error);
+        return;
+      }
+
+      if (userProfile) {
+        setUserProfile(userProfile);
+      }
+    } catch (error) {
+      console.error('Error loading profile:', error);
+    } finally {
+      setProfileLoading(false);
+    }
+  };
 
   const getCurrentLocation = async () => {
     try {
@@ -295,20 +355,38 @@ export default function MapScreen() {
         </View>
       )}
 
-      {/* Floating Header with Profile and QR Code Buttons */}
+      {/* Floating Header with Profile Button Only */}
       <View style={styles.headerButtons}>
-        <TouchableOpacity
-          style={styles.profileButton}
-          onPress={() => router.push('/(tabs)/profile')}
-        >
-          <IconSymbol name="pawprint.fill" size={24} color="#4CAF50" />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.wireframeButton}
-          onPress={() => router.push('/scan-pet')}
-        >
-          <IconSymbol name="square.grid.3x3" size={24} color="#333" />
-        </TouchableOpacity>
+        <View style={styles.profileContainer}>
+          <TouchableOpacity
+            style={styles.profileButton}
+            onPress={() => router.push('/(tabs)/profile')}
+          >
+            {profileLoading ? (
+              <ActivityIndicator size="small" color="#4CAF50" />
+            ) : userProfile?.avatar_url ? (
+              <Image
+                source={{ uri: userProfile.avatar_url }}
+                style={styles.profileAvatar}
+              />
+            ) : (
+              <View style={styles.defaultAvatar}>
+                <Text style={styles.avatarEmoji}>🐕</Text>
+              </View>
+            )}
+
+
+          </TouchableOpacity>
+
+          {/* EXP Bar */}
+          <View style={styles.expBar}>
+            <Text style={styles.expLabel}>EXP</Text>
+            <View style={styles.expValue}>
+              <IconSymbol name="pawprint.fill" size={16} color="#fff" />
+              <Text style={styles.expText}>{userProfile?.exp_points || 0}</Text>
+            </View>
+          </View>
+        </View>
       </View>
 
       {/* My Location Button */}
@@ -319,13 +397,8 @@ export default function MapScreen() {
         <IconSymbol name="location.fill" size={24} color="#4CAF50" />
       </TouchableOpacity>
 
-      <View style={styles.expContainer}>
-        <Text style={styles.expLabel}>EXP</Text>
-        <View style={styles.expValue}>
-          <IconSymbol name="pawprint.fill" size={16} color="#4CAF50" />
-          <Text style={styles.expText}>240</Text>
-        </View>
-      </View>
+      {/* EXP Container with Level */}
+      {/* This section is now replaced by the expBar in the header */}
 
       {/* Location Details Card */}
       {selectedLocation && (
@@ -449,15 +522,16 @@ const styles = StyleSheet.create({
     top: 50,
     right: 20,
     zIndex: 10,
-    flexDirection: 'row',
+    alignItems: 'flex-end',
+  },
+  profileContainer: {
     alignItems: 'center',
-    gap: 8,
   },
   profileButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#4CAF50',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -465,46 +539,70 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    overflow: 'hidden',
+    position: 'relative',
   },
-  wireframeButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+  profileAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+  },
+  defaultAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#4CAF50',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
-  expContainer: {
+  avatarEmoji: {
+    fontSize: 30,
+  },
+  levelBanner: {
     position: 'absolute',
-    top: 110,
-    right: 20,
-    zIndex: 10,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    top: -8,
+    left: -8,
+    backgroundColor: '#fff',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
     borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  levelBannerText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#333',
+    letterSpacing: 0.5,
+  },
+  expBar: {
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginTop: -8,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    minWidth: 100,
   },
   expLabel: {
     fontSize: 12,
     color: '#fff',
     fontWeight: '600',
-    marginBottom: 2,
   },
   expValue: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 4,
   },
   expText: {
     fontSize: 14,
     color: '#fff',
     fontWeight: 'bold',
-    marginLeft: 4,
   },
   markerContainer: {
     width: 40,

@@ -1,154 +1,239 @@
-import React from 'react';
-import { View, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
-import { router, usePathname } from 'expo-router';
-import { IconSymbol, SFSymbolName } from '@/components/ui/icon-symbol';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { useAuth } from '@/lib/auth-context';
+import { supabase } from '@/lib/supabase';
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
 
-const { width } = Dimensions.get('window');
-
-interface TabItem {
-  name: string;
-  title: string;
-  icon: SFSymbolName;
-  route: string;
+interface UserProfile {
+  id: string;
+  display_name: string;
+  avatar_url: string | null;
+  exp_points: number;
+  level: number;
 }
 
-const tabs: TabItem[] = [
-  {
-    name: 'marketplace',
-    title: 'Marketplace',
-    icon: 'bag.fill',
-    route: '/(tabs)/marketplace',
-  },
-  {
-    name: 'profile',
-    title: 'Quests',
-    icon: 'list.bullet',
-    route: '/(tabs)/profile',
-  },
-];
+export function CustomTabBar({ state, descriptors, navigation }: any) {
+  const { user } = useAuth();
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
 
-export default function CustomTabBar() {
-  const pathname = usePathname();
+  useEffect(() => {
+    if (user) {
+      loadUserProfile();
+    }
+  }, [user]);
 
-  const handleTabPress = (route: string) => {
-    router.push(route as any);
-  };
+  const loadUserProfile = async () => {
+    try {
+      setProfileLoading(true);
 
-  const handleCenterPress = () => {
-    router.push('/(tabs)/profile');
+      if (!user) {
+        console.error('No authenticated user found');
+        return;
+      }
+
+      // Fetch user profile from database
+      const { data: userProfile, error } = await supabase
+        .from('users')
+        .select(`
+          id,
+          display_name,
+          avatar_url,
+          exp_points,
+          level
+        `)
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching user profile:', error);
+        return;
+      }
+
+      if (userProfile) {
+        console.log('Profile loaded in tab bar:', userProfile);
+        setUserProfile(userProfile);
+      }
+    } catch (error) {
+      console.error('Error loading profile:', error);
+    } finally {
+      setProfileLoading(false);
+    }
   };
 
   return (
-    <View style={styles.container}>
-      {/* Left Tab */}
-      <TouchableOpacity
-        style={[styles.tab, pathname === '/(tabs)/marketplace' && styles.activeTab]}
-        onPress={() => handleTabPress('/(tabs)/marketplace')}
-      >
-        <IconSymbol 
-          name={tabs[0].icon} 
-          size={24} 
-          color={pathname === '/(tabs)/marketplace' ? '#4CAF50' : '#fff'} 
-        />
-        <IconSymbol 
-          name="textformat" 
-          size={12} 
-          color={pathname === '/(tabs)/marketplace' ? '#4CAF50' : '#fff'} 
-          style={styles.tabLabel}
-        />
-      </TouchableOpacity>
+    <View style={styles.tabBar}>
+      {state.routes.map((route: any, index: number) => {
+        const { options } = descriptors[route.key];
+        const label = options.tabBarLabel !== undefined
+          ? options.tabBarLabel
+          : options.title !== undefined
+            ? options.title
+            : route.name;
 
-      {/* Center Avatar */}
-      <TouchableOpacity
-        style={styles.centerButton}
-        onPress={handleCenterPress}
-        activeOpacity={0.8}
-      >
-        <View style={styles.avatarCircle}>
-          <IconSymbol name="person.circle.fill" size={50} color="#4CAF50" />
-        </View>
-        <View style={styles.avatarLabel}>
-          <IconSymbol name="textformat" size={16} color="#fff" />
-        </View>
-      </TouchableOpacity>
+        const isFocused = state.index === index;
 
-      {/* Right Tab */}
-      <TouchableOpacity
-        style={[styles.tab, pathname === '/(tabs)/profile' && styles.activeTab]}
-        onPress={() => handleTabPress('/(tabs)/profile')}
-      >
-        <IconSymbol 
-          name={tabs[1].icon} 
-          size={24} 
-          color={pathname === '/(tabs)/profile' ? '#4CAF50' : '#fff'} 
-        />
-        <IconSymbol 
-          name="textformat" 
-          size={12} 
-          color={pathname === '/(tabs)/profile' ? '#4CAF50' : '#fff'} 
-          style={styles.tabLabel}
-        />
-      </TouchableOpacity>
+        const onPress = () => {
+          const event = navigation.emit({
+            type: 'tabPress',
+            target: route.key,
+            canPreventDefault: true,
+          });
+
+          if (!isFocused && !event.defaultPrevented) {
+            navigation.navigate(route.name, route.params);
+          }
+        };
+
+        const onLongPress = () => {
+          navigation.emit({
+            type: 'tabLongPress',
+            target: route.key,
+          });
+        };
+
+        // Special handling for the middle button (profile)
+        if (route.name === 'profile') {
+          return (
+            <TouchableOpacity
+              key={route.key}
+              accessibilityRole="button"
+              accessibilityState={isFocused ? { selected: true } : {}}
+              accessibilityLabel={options.tabBarAccessibilityLabel}
+              testID={options.tabBarTestID}
+              onPress={onPress}
+              onLongPress={onLongPress}
+              style={styles.middleTab}
+            >
+              <View style={styles.profileButton}>
+                {profileLoading ? (
+                  <ActivityIndicator size="small" color="#4CAF50" />
+                ) : userProfile?.avatar_url ? (
+                  <Image
+                    source={{ uri: userProfile.avatar_url }}
+                    style={styles.profileAvatar}
+                    onError={(error) => console.log('Image load error:', error)}
+                    onLoad={() => console.log('Image loaded successfully')}
+                  />
+                ) : (
+                  <View style={styles.defaultAvatar}>
+                    <Text style={styles.avatarEmoji}>🐕</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={[styles.middleTabLabel, isFocused && styles.middleTabLabelFocused]}>
+                Profile
+              </Text>
+            </TouchableOpacity>
+          );
+        }
+
+        // Regular tab buttons
+        return (
+          <TouchableOpacity
+            key={route.key}
+            accessibilityRole="button"
+            accessibilityState={isFocused ? { selected: true } : {}}
+            accessibilityLabel={options.tabBarAccessibilityLabel}
+            testID={options.tabBarTestID}
+            onPress={onPress}
+            onLongPress={onLongPress}
+            style={styles.tab}
+          >
+            <IconSymbol
+              name={options.tabBarIcon}
+              size={24}
+              color={isFocused ? '#4CAF50' : '#666'}
+            />
+            <Text style={[styles.tabLabel, isFocused && styles.tabLabelFocused]}>
+              {label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  tabBar: {
     flexDirection: 'row',
-    backgroundColor: '#2D5A5A',
-    height: 80,
-    paddingBottom: 20,
-    paddingTop: 10,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderTopLeftRadius: 0,
-    borderTopRightRadius: 0,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+    paddingTop: 8,
+    paddingBottom: 8,
+    paddingHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
   },
   tab: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
     paddingVertical: 8,
   },
-  activeTab: {
-    // Add any active state styling if needed
-  },
-  centerButton: {
-    position: 'absolute',
-    left: '50%',
-    marginLeft: -40,
-    bottom: 30,
+  middleTab: {
+    flex: 1,
     alignItems: 'center',
-    zIndex: 10,
+    paddingVertical: 8,
   },
-  avatarCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+  profileButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: '#4CAF50',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 4,
-    borderColor: '#fff',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    overflow: 'hidden',
+    marginBottom: 4,
   },
-  avatarLabel: {
-    position: 'absolute',
-    top: -15,
-    left: '50%',
-    marginLeft: -20,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
+  profileAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+  },
+  defaultAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#4CAF50',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarEmoji: {
+    fontSize: 24,
   },
   tabLabel: {
+    fontSize: 12,
+    color: '#666',
     marginTop: 4,
+  },
+  tabLabelFocused: {
+    color: '#4CAF50',
+    fontWeight: '600',
+  },
+  middleTabLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
+  },
+  middleTabLabelFocused: {
+    color: '#4CAF50',
+    fontWeight: '600',
   },
 });

@@ -1,5 +1,6 @@
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useAuth } from '@/lib/auth-context';
+import { useProfile } from '@/lib/profile-context';
 import { supabase } from '@/lib/supabase';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
@@ -47,66 +48,30 @@ const mockUserPosts: UserPost[] = [
 
 export default function ProfileScreen() {
     const { user } = useAuth();
+    const { userProfile, loading: profileLoading, refreshProfile, updateProfile } = useProfile();
     const [activeTab, setActiveTab] = useState<'posts' | 'achievements'>('posts');
     const [isEditing, setIsEditing] = useState(false);
     const [editModalVisible, setEditModalVisible] = useState(false);
-    const [loading, setLoading] = useState(true);
-    const [profile, setProfile] = useState<UserProfile | null>(null);
-    const [userName, setUserName] = useState('');
-    const [userBio, setUserBio] = useState('');
-    const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+    const [userName, setUserName] = useState(userProfile?.display_name || '');
+    const [userBio, setUserBio] = useState(userProfile?.bio || '');
+    const [avatarUrl, setAvatarUrl] = useState<string | null>(userProfile?.avatar_url || null);
     const [uploading, setUploading] = useState(false);
 
-    // Load user profile from database
+    // Update local state when profile changes
     useEffect(() => {
-        if (user) {
-            loadUserProfile();
+        if (userProfile) {
+            setUserName(userProfile.display_name || '');
+            setUserBio(userProfile.bio || '');
+            setAvatarUrl(userProfile.avatar_url);
         }
-    }, [user]);
+    }, [userProfile]);
 
-    const loadUserProfile = async () => {
-        try {
-            setLoading(true);
-
-            if (!user) {
-                console.error('No authenticated user found');
-                return;
-            }
-
-            // Fetch user profile from database - only select existing columns
-            const { data: userProfile, error } = await supabase
-                .from('users')
-                .select(`
-                    id,
-                    display_name,
-                    bio,
-                    avatar_url,
-                    exp_points,
-                    paw_points,
-                    level
-                `)
-                .eq('id', user.id)
-                .single();
-
-            if (error) {
-                console.error('Error fetching user profile:', error);
-                Alert.alert('Error', 'Failed to load profile. Please try again.');
-                return;
-            }
-
-            if (userProfile) {
-                setProfile(userProfile);
-                setUserName(userProfile.display_name || '');
-                setUserBio(userProfile.bio || '');
-                setAvatarUrl(userProfile.avatar_url);
-            }
-        } catch (error) {
-            console.error('Error loading profile:', error);
-            Alert.alert('Error', 'Failed to load profile. Please try again.');
-        } finally {
-            setLoading(false);
+    // Refresh profile when component mounts
+    useEffect(() => {
+        if (user && !userProfile) {
+            refreshProfile();
         }
-    };
+    }, [user, userProfile, refreshProfile]);
 
     const handleBackToIndex = () => {
         router.push('/');
@@ -157,8 +122,8 @@ export default function ProfileScreen() {
             if (imageUrl) {
                 setAvatarUrl(imageUrl);
                 // Update profile state
-                if (profile) {
-                    setProfile({ ...profile, avatar_url: imageUrl });
+                if (userProfile) {
+                    updateProfile({ avatar_url: imageUrl });
                 }
                 Alert.alert('Success', 'Profile picture updated!');
             }
@@ -262,10 +227,11 @@ export default function ProfileScreen() {
                 return;
             }
 
-            // Update local profile state
-            if (profile) {
-                setProfile({ ...profile, display_name: userName, bio: userBio });
-            }
+            // Update the profile context
+            updateProfile({
+                display_name: userName,
+                bio: userBio
+            });
 
             setEditModalVisible(false);
             Alert.alert('Success', 'Profile updated successfully!');
@@ -293,7 +259,8 @@ export default function ProfileScreen() {
         </TouchableOpacity>
     );
 
-    if (loading) {
+    // Use the loading state from the profile context
+    if (profileLoading) {
         return (
             <SafeAreaView style={styles.container}>
                 <View style={styles.loadingContainer}>
@@ -304,12 +271,12 @@ export default function ProfileScreen() {
         );
     }
 
-    if (!profile) {
+    if (!userProfile) {
         return (
             <SafeAreaView style={styles.container}>
                 <View style={styles.errorContainer}>
                     <Text style={styles.errorText}>Failed to load profile</Text>
-                    <TouchableOpacity onPress={loadUserProfile} style={styles.retryButton}>
+                    <TouchableOpacity onPress={refreshProfile} style={styles.retryButton}>
                         <Text style={styles.retryButtonText}>Retry</Text>
                     </TouchableOpacity>
                 </View>
@@ -325,6 +292,9 @@ export default function ProfileScreen() {
                     <IconSymbol name="xmark" size={24} color="#333" />
                 </TouchableOpacity>
                 <View style={styles.headerRight}>
+                    <TouchableOpacity onPress={() => router.push('/scan-pet')} style={styles.scanButton}>
+                        <IconSymbol name="square.grid.3x3" size={24} color="#333" />
+                    </TouchableOpacity>
                     <TouchableOpacity onPress={handleEditProfile}>
                         <IconSymbol name="gearshape" size={24} color="#333" />
                     </TouchableOpacity>
@@ -351,15 +321,15 @@ export default function ProfileScreen() {
 
                     {/* Level Banner */}
                     <View style={styles.levelBanner}>
-                        <Text style={styles.levelText}>{getLevelName(profile.level)}</Text>
-                        <Text style={styles.levelSubtext}>LEVEL {profile.level}</Text>
+                        <Text style={styles.levelText}>{getLevelName(userProfile.level)}</Text>
+                        <Text style={styles.levelSubtext}>LEVEL {userProfile.level}</Text>
                     </View>
                 </View>
 
                 {/* User Info */}
                 <View style={styles.userInfo}>
-                    <Text style={styles.userName}>{profile.display_name || 'Pet Owner'}</Text>
-                    <Text style={styles.userBio}>{profile.bio || 'No bio yet'}</Text>
+                    <Text style={styles.userName}>{userProfile.display_name || 'Pet Owner'}</Text>
+                    <Text style={styles.userBio}>{userProfile.bio || 'No bio yet'}</Text>
                 </View>
 
                 {/* Stats Row */}
@@ -374,11 +344,11 @@ export default function ProfileScreen() {
                     </View>
                     <View style={styles.statItem}>
                         <IconSymbol name="pawprint.fill" size={16} color="#4CAF50" />
-                        <Text style={styles.statNumber}>{profile.exp_points || 0}</Text>
+                        <Text style={styles.statNumber}>{userProfile.exp_points || 0}</Text>
                         <Text style={styles.statLabel}>EXP</Text>
                     </View>
                     <View style={styles.statItem}>
-                        <Text style={styles.statNumber}>{profile.paw_points || 0}</Text>
+                        <Text style={styles.statNumber}>{userProfile.paw_points || 0}</Text>
                         <Text style={styles.statLabel}>PawPoints</Text>
                     </View>
                 </View>
@@ -538,6 +508,16 @@ const styles = StyleSheet.create({
     },
     headerRight: {
         alignItems: 'flex-end',
+        flexDirection: 'row',
+        gap: 12,
+    },
+    scanButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#f0f0f0',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     editCosmetics: {
         fontSize: 12,
