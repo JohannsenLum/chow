@@ -47,7 +47,7 @@ const mockUserPosts: UserPost[] = [
 ];
 
 export default function ProfileScreen() {
-    const { user } = useAuth();
+    const { user, signOut } = useAuth();
     const { userProfile, loading: profileLoading, refreshProfile, updateProfile } = useProfile();
     const [activeTab, setActiveTab] = useState<'posts' | 'achievements'>('posts');
     const [isEditing, setIsEditing] = useState(false);
@@ -79,6 +79,32 @@ export default function ProfileScreen() {
 
     const handleEditProfile = () => {
         setEditModalVisible(true);
+    };
+
+    const handleLogout = () => {
+        Alert.alert(
+            'Logout',
+            'Are you sure you want to logout?',
+            [
+                {
+                    text: 'Cancel',
+                    style: 'cancel',
+                },
+                {
+                    text: 'Logout',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await signOut();
+                            router.replace('/login');
+                        } catch (error) {
+                            console.error('Logout error:', error);
+                            Alert.alert('Error', 'Failed to logout. Please try again.');
+                        }
+                    },
+                },
+            ]
+        );
     };
 
     const handleImagePicker = async () => {
@@ -298,7 +324,6 @@ export default function ProfileScreen() {
                     <TouchableOpacity onPress={handleEditProfile}>
                         <IconSymbol name="gearshape" size={24} color="#333" />
                     </TouchableOpacity>
-                    <Text style={styles.editCosmetics}>Edit Cosmetics</Text>
                 </View>
             </View>
 
@@ -396,61 +421,77 @@ export default function ProfileScreen() {
                         <TouchableOpacity onPress={handleCancelEdit}>
                             <Text style={styles.cancelButton}>Cancel</Text>
                         </TouchableOpacity>
-                        <Text style={styles.modalTitle}>Edit Profile</Text>
+                        <Text style={styles.modalTitle}>Settings</Text>
                         <TouchableOpacity onPress={handleSaveProfile}>
                             <Text style={styles.saveButton}>Save</Text>
                         </TouchableOpacity>
                     </View>
 
                     <ScrollView style={styles.modalContent}>
-                        <View style={styles.editSection}>
-                            <Text style={styles.editLabel}>Pet Name</Text>
-                            <TextInput
-                                style={styles.editInput}
-                                value={userName}
-                                onChangeText={setUserName}
-                                placeholder="Enter pet name"
-                                maxLength={20}
-                            />
-                        </View>
+                        {/* Profile Settings Section */}
+                        <View style={styles.settingsSection}>
+                            <Text style={styles.sectionTitle}>Profile Settings</Text>
 
-                        <View style={styles.editSection}>
-                            <Text style={styles.editLabel}>Bio</Text>
-                            <TextInput
-                                style={[styles.editInput, styles.bioInput]}
-                                value={userBio}
-                                onChangeText={setUserBio}
-                                placeholder="Tell us about your pet..."
-                                multiline
-                                numberOfLines={4}
-                                maxLength={150}
-                            />
-                            <Text style={styles.characterCount}>{userBio.length}/150</Text>
-                        </View>
+                            <View style={styles.editSection}>
+                                <Text style={styles.editLabel}>Pet Name</Text>
+                                <TextInput
+                                    style={styles.editInput}
+                                    value={userName}
+                                    onChangeText={setUserName}
+                                    placeholder="Enter pet name"
+                                    maxLength={20}
+                                />
+                            </View>
 
-                        <View style={styles.editSection}>
-                            <Text style={styles.editLabel}>Pet Avatar</Text>
-                            <TouchableOpacity
-                                style={styles.avatarEditButton}
-                                onPress={handleImagePicker}
-                                disabled={uploading}
-                            >
-                                {uploading ? (
-                                    <ActivityIndicator size="small" color="#4CAF50" />
-                                ) : (
-                                    <IconSymbol name="camera.fill" size={24} color="#4CAF50" />
+                            <View style={styles.editSection}>
+                                <Text style={styles.editLabel}>Bio</Text>
+                                <TextInput
+                                    style={[styles.editInput, styles.bioInput]}
+                                    value={userBio}
+                                    onChangeText={setUserBio}
+                                    placeholder="Tell us about your pet..."
+                                    multiline
+                                    numberOfLines={4}
+                                    maxLength={150}
+                                />
+                                <Text style={styles.characterCount}>{userBio.length}/150</Text>
+                            </View>
+
+                            <View style={styles.editSection}>
+                                <Text style={styles.editLabel}>Pet Avatar</Text>
+                                <TouchableOpacity
+                                    style={styles.avatarEditButton}
+                                    onPress={handleImagePicker}
+                                    disabled={uploading}
+                                >
+                                    {uploading ? (
+                                        <ActivityIndicator size="small" color="#4CAF50" />
+                                    ) : (
+                                        <IconSymbol name="camera.fill" size={24} color="#4CAF50" />
+                                    )}
+                                    <Text style={styles.avatarEditText}>
+                                        {uploading ? 'Uploading...' : 'Change Avatar'}
+                                    </Text>
+                                </TouchableOpacity>
+
+                                {avatarUrl && (
+                                    <View style={styles.currentAvatarContainer}>
+                                        <Text style={styles.currentAvatarLabel}>Current Avatar:</Text>
+                                        <Image source={{ uri: avatarUrl }} style={styles.currentAvatarImage} />
+                                    </View>
                                 )}
-                                <Text style={styles.avatarEditText}>
-                                    {uploading ? 'Uploading...' : 'Change Avatar'}
-                                </Text>
-                            </TouchableOpacity>
+                            </View>
+                        </View>
 
-                            {avatarUrl && (
-                                <View style={styles.currentAvatarContainer}>
-                                    <Text style={styles.currentAvatarLabel}>Current Avatar:</Text>
-                                    <Image source={{ uri: avatarUrl }} style={styles.currentAvatarImage} />
-                                </View>
-                            )}
+                        {/* Account Actions Section */}
+                        <View style={styles.settingsSection}>
+                            <Text style={styles.sectionTitle}>Account</Text>
+
+                            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+                                <IconSymbol name="rectangle.portrait.and.arrow.right" size={24} color="#F44336" />
+                                <Text style={styles.logoutButtonText}>Logout</Text>
+                                <IconSymbol name="chevron.right" size={16} color="#999" />
+                            </TouchableOpacity>
                         </View>
                     </ScrollView>
                 </SafeAreaView>
@@ -516,6 +557,14 @@ const styles = StyleSheet.create({
         height: 40,
         borderRadius: 20,
         backgroundColor: '#f0f0f0',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    logoutButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#ffebee',
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -782,5 +831,32 @@ const styles = StyleSheet.create({
         borderRadius: 40,
         borderWidth: 2,
         borderColor: '#4CAF50',
+    },
+    settingsSection: {
+        marginBottom: 30,
+    },
+    sectionTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#333',
+        marginBottom: 15,
+        marginTop: 10,
+    },
+    logoutButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#ffebee',
+        paddingHorizontal: 15,
+        paddingVertical: 15,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#ffcdd2',
+    },
+    logoutButtonText: {
+        flex: 1,
+        fontSize: 16,
+        color: '#F44336',
+        fontWeight: '500',
+        marginLeft: 12,
     },
 });

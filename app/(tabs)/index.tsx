@@ -8,12 +8,26 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
   View
 } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
+
+// Dynamic imports for maps (only on native platforms)
+let MapView: any = null;
+let Marker: any = null;
+let PROVIDER_GOOGLE: any = null;
+let Region: any = null;
+
+if (Platform.OS !== 'web') {
+  const Maps = require('react-native-maps');
+  MapView = Maps.default;
+  Marker = Maps.Marker;
+  PROVIDER_GOOGLE = Maps.PROVIDER_GOOGLE;
+  Region = Maps.Region;
+}
 
 interface PetLocation {
   id: string;
@@ -249,53 +263,59 @@ export default function MapScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Map - Full Screen */}
-      <MapView
-        ref={mapRef}
-        style={styles.map}
-        provider={PROVIDER_GOOGLE}
-        initialRegion={mapRegion}
-        showsUserLocation={true}
-        showsMyLocationButton={false}
-        mapType="standard"
-        followsUserLocation={false} // Disable auto-follow to prevent conflicts
-        customMapStyle={[
-          {
-            featureType: "landscape",
-            elementType: "geometry.fill",
-            stylers: [
-              {
-                color: "#e8f5e8"
-              }
-            ]
-          },
-          {
-            featureType: "water",
-            elementType: "geometry.fill",
-            stylers: [
-              {
-                color: "#87CEEB"
-              }
-            ]
-          }
-        ]}
-      >
-        {mockPetLocations.map((petLocation) => (
-          <Marker
-            key={petLocation.id}
-            coordinate={petLocation.coordinate}
-            onPress={() => handleMarkerPress(petLocation)}
-          >
-            <View style={[styles.markerContainer, { backgroundColor: getMarkerColor(petLocation.type) }]}>
-              <IconSymbol
-                name={getMarkerIcon(petLocation.type)}
-                size={20}
-                color="#fff"
-              />
-            </View>
-          </Marker>
-        ))}
-      </MapView>
+      {Platform.OS === 'web' ? (
+        <View style={styles.webPlaceholder}>
+          <Text style={styles.webText}>Maps not available on web</Text>
+          <Text style={styles.webSubtext}>Please use the mobile app for full functionality</Text>
+        </View>
+      ) : (
+        <MapView
+          ref={mapRef}
+          style={styles.map}
+          provider={PROVIDER_GOOGLE}
+          initialRegion={mapRegion}
+          showsUserLocation={true}
+          showsMyLocationButton={false}
+          mapType="standard"
+          followsUserLocation={false} // Disable auto-follow to prevent conflicts
+          customMapStyle={[
+            {
+              featureType: "landscape",
+              elementType: "geometry.fill",
+              stylers: [
+                {
+                  color: "#e8f5e8"
+                }
+              ]
+            },
+            {
+              featureType: "water",
+              elementType: "geometry.fill",
+              stylers: [
+                {
+                  color: "#87CEEB"
+                }
+              ]
+            }
+          ]}
+        >
+          {mockPetLocations.map((petLocation) => (
+            <Marker
+              key={petLocation.id}
+              coordinate={petLocation.coordinate}
+              onPress={() => handleMarkerPress(petLocation)}
+            >
+              <View style={[styles.markerContainer, { backgroundColor: getMarkerColor(petLocation.type) }]}>
+                <IconSymbol
+                  name={getMarkerIcon(petLocation.type)}
+                  size={20}
+                  color="#fff"
+                />
+              </View>
+            </Marker>
+          ))}
+        </MapView>
+      )}
 
       {/* Location Loading Indicator */}
       {locationLoading && (
@@ -689,5 +709,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginLeft: 8,
+  },
+  webPlaceholder: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+  },
+  webText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
+  },
+  webSubtext: {
+    fontSize: 14,
+    color: '#666',
   },
 });
