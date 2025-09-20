@@ -10,6 +10,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { AuthProvider, useAuth } from '@/lib/auth-context';
 import { ProfileProvider } from '@/lib/profile-context';
+import { QuestProvider } from '@/lib/quest-context';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -67,10 +68,12 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <ProfileProvider>
-        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <RootLayoutNav />
-        </ThemeProvider>
-        <StatusBar style="auto" />
+        <QuestProvider>
+          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+            <RootLayoutNav />
+          </ThemeProvider>
+          <StatusBar style="auto" />
+        </QuestProvider>
       </ProfileProvider>
     </AuthProvider>
   );

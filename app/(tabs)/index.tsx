@@ -1,6 +1,6 @@
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useAuth } from '@/lib/auth-context';
-import { supabase } from '@/lib/supabase';
+import { useProfile } from '@/lib/profile-context';
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
@@ -134,12 +134,11 @@ const getLevelName = (level: number) => {
 
 export default function MapScreen() {
   const { user } = useAuth();
+  const { userProfile, loading: profileLoading } = useProfile();
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<PetLocation | null>(null);
   const [locationLoading, setLocationLoading] = useState(true);
   const [locationError, setLocationError] = useState<string | null>(null);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [profileLoading, setProfileLoading] = useState(true);
   const [mapRegion, setMapRegion] = useState<Region>({
     latitude: 1.3502, // Singapore Serangoon Central coordinates as fallback
     longitude: 103.8729,
@@ -151,45 +150,7 @@ export default function MapScreen() {
 
   useEffect(() => {
     getCurrentLocation();
-    loadUserProfile();
   }, [user]);
-
-  const loadUserProfile = async () => {
-    try {
-      setProfileLoading(true);
-
-      if (!user) {
-        console.error('No authenticated user found');
-        return;
-      }
-
-      // Fetch user profile from database
-      const { data: userProfile, error } = await supabase
-        .from('users')
-        .select(`
-          id,
-          display_name,
-          avatar_url,
-          exp_points,
-          level
-        `)
-        .eq('id', user.id)
-        .single();
-
-      if (error) {
-        console.error('Error fetching user profile:', error);
-        return;
-      }
-
-      if (userProfile) {
-        setUserProfile(userProfile);
-      }
-    } catch (error) {
-      console.error('Error loading profile:', error);
-    } finally {
-      setProfileLoading(false);
-    }
-  };
 
   const getCurrentLocation = async () => {
     try {

@@ -1,60 +1,19 @@
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import * as React from 'react';
+import { BorderRadius, Colors, Shadows, Spacing, Typography } from '@/constants/theme';
+import { useProfile } from '@/lib/profile-context';
+import { useQuest } from '@/lib/quest-context';
 import { useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   Modal,
+  SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  ScrollView,
-  SafeAreaView,
 } from 'react-native';
-import { Colors, Spacing, BorderRadius, Typography, Shadows } from '@/constants/theme';
-
-interface Quest {
-  id: string;
-  title: string;
-  description: string;
-  reward: string;
-  difficulty: 'Basic' | 'Advanced';
-  status: 'active' | 'complete';
-}
-
-const mockQuests: Quest[] = [
-  {
-    id: '1',
-    title: 'Evening Walk',
-    description: 'Stretch those little paws! Take your furry friend for a 30-minute stroll.',
-    reward: '+50 EXP',
-    difficulty: 'Basic',
-    status: 'active',
-  },
-  {
-    id: '2',
-    title: 'Pet Cafe Review',
-    description: 'Share the love! Write a fun review of a pet-friendly café you visited.',
-    reward: '+200 EXP',
-    difficulty: 'Advanced',
-    status: 'active',
-  },
-  {
-    id: '3',
-    title: 'Weekend Pet Meet',
-    description: 'Sniff, wag, and mingle! Bring your pet to the weekend social event.',
-    reward: '+350 EXP',
-    difficulty: 'Advanced',
-    status: 'active',
-  },
-  {
-    id: '4',
-    title: 'First Vet Visit',
-    description: 'Take your pet for their first health checkup.',
-    reward: '+100 EXP',
-    difficulty: 'Basic',
-    status: 'complete',
-  },
-];
 
 interface QuestModalProps {
   visible: boolean;
@@ -62,20 +21,93 @@ interface QuestModalProps {
 }
 
 export default function QuestModal({ visible, onClose }: QuestModalProps) {
-  const [activeTab, setActiveTab] = useState<'active' | 'complete'>('active');
+  const { quests, userQuests, loading, startQuest, completeQuest, claimReward, resetDailyQuests } = useQuest();
+  const { refreshProfile } = useProfile();
+  const [activeTab, setActiveTab] = useState<'available' | 'active' | 'completed'>('available');
 
-  const activeQuests = mockQuests.filter(quest => quest.status === 'active');
-  const completeQuests = mockQuests.filter(quest => quest.status === 'complete');
+  // Fix the available quests logic
+  const availableQuests = quests.filter(quest => {
+    const userQuest = userQuests.find(uq => uq.quest_id === quest.id);
+    return !userQuest || userQuest.status === 'available';
+  });
+
+  const activeQuests = userQuests.filter(userQuest => userQuest.status === 'active');
+
+  // Updated: Include both 'completed' and 'claimed' statuses in completed quests
+  const completedQuests = userQuests.filter(userQuest =>
+    userQuest.status === 'completed' || userQuest.status === 'claimed'
+  );
 
   const getDifficultyColor = (difficulty: string) => {
-    return difficulty === 'Basic' ? '#E3F2FD' : '#F3E5F5';
+    switch (difficulty) {
+      case 'Basic': return '#E3F2FD';
+      case 'Advanced': return '#F3E5F5';
+      case 'Expert': return '#FFEBEE';
+      default: return '#E3F2FD';
+    }
   };
 
   const getDifficultyTextColor = (difficulty: string) => {
-    return difficulty === 'Basic' ? '#1976D2' : '#7B1FA2';
+    switch (difficulty) {
+      case 'Basic': return '#1976D2';
+      case 'Advanced': return '#7B1FA2';
+      case 'Expert': return '#D32F2F';
+      default: return '#1976D2';
+    }
   };
 
-  const renderQuestCard = (quest: Quest) => (
+  const handleStartQuest = async (questId: string) => {
+    const success = await startQuest(questId);
+    if (success) {
+      Alert.alert('Quest Started!', 'Good luck on your quest!');
+    } else {
+      Alert.alert('Error', 'Failed to start quest. Please try again.');
+    }
+  };
+
+  const handleCompleteQuest = async (questId: string) => {
+    const success = await completeQuest(questId);
+    if (success) {
+      Alert.alert('Quest Completed!', 'Great job! You can now claim your reward.');
+    } else {
+      Alert.alert('Error', 'Failed to complete quest. Please try again.');
+    }
+  };
+
+  const handleClaimReward = async (questId: string) => {
+    const success = await claimReward(questId);
+    if (success) {
+      Alert.alert('Reward Claimed!', 'Your rewards have been added to your profile.');
+      // Refresh profile to show updated points
+      await refreshProfile();
+    } else {
+      Alert.alert('Error', 'Failed to claim reward. Please try again.');
+    }
+  };
+
+  const handleResetDailyQuests = async () => {
+    Alert.alert(
+      'Reset Daily Quests',
+      'This will reset all your active and completed quests. Are you sure?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: async () => {
+            const success = await resetDailyQuests();
+            if (success) {
+              Alert.alert('Success', 'Daily quests have been reset!');
+            } else {
+              Alert.alert('Error', 'Failed to reset quests. Please try again.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const renderQuestCard = (quest: any, userQuest?: any) => (
     <View key={quest.id} style={styles.questCard}>
       <View style={styles.questHeader}>
         <Text style={styles.questTitle}>{quest.title}</Text>
@@ -88,15 +120,48 @@ export default function QuestModal({ visible, onClose }: QuestModalProps) {
       <Text style={styles.questDescription}>{quest.description}</Text>
       <View style={styles.questFooter}>
         <View style={styles.rewardContainer}>
-          <Text style={styles.rewardText}>{quest.reward}</Text>
+          <Text style={styles.rewardText}>+{quest.reward_exp} EXP</Text>
           <IconSymbol name="pawprint.fill" size={16} color="#8D6E63" />
+          <Text style={styles.rewardText}>+{quest.reward_paw_points} PawPoints</Text>
         </View>
-        <TouchableOpacity style={styles.startButton}>
-          <Text style={styles.startButtonText}>Start Quest</Text>
+        <TouchableOpacity
+          style={[
+            styles.actionButton,
+            userQuest?.status === 'completed' && styles.claimButton,
+            userQuest?.status === 'claimed' && styles.claimedButton // Add claimed button style
+          ]}
+          onPress={() => {
+            if (userQuest?.status === 'completed') {
+              handleClaimReward(quest.id);
+            } else if (userQuest?.status === 'active') {
+              handleCompleteQuest(quest.id);
+            } else {
+              handleStartQuest(quest.id);
+            }
+          }}
+        >
+          <Text style={styles.actionButtonText}>
+            {userQuest?.status === 'claimed' ? 'Reward Claimed' :
+              userQuest?.status === 'completed' ? 'Claim Reward' :
+                userQuest?.status === 'active' ? 'Complete Quest' : 'Start Quest'}
+          </Text>
         </TouchableOpacity>
       </View>
     </View>
   );
+
+  if (loading) {
+    return (
+      <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
+        <SafeAreaView style={styles.container}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={Colors.primary} />
+            <Text style={styles.loadingText}>Loading quests...</Text>
+          </View>
+        </SafeAreaView>
+      </Modal>
+    );
+  }
 
   return (
     <Modal
@@ -108,12 +173,25 @@ export default function QuestModal({ visible, onClose }: QuestModalProps) {
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>Quests</Text>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <IconSymbol name="xmark" size={24} color={Colors.text} />
-          </TouchableOpacity>
+          <View style={styles.headerRight}>
+            <TouchableOpacity onPress={handleResetDailyQuests} style={styles.resetButton}>
+              <IconSymbol name="arrow.clockwise" size={20} color={Colors.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <IconSymbol name="xmark" size={24} color={Colors.text} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'available' && styles.activeTab]}
+            onPress={() => setActiveTab('available')}
+          >
+            <Text style={[styles.tabText, activeTab === 'available' && styles.activeTabText]}>
+              Available ({availableQuests.length})
+            </Text>
+          </TouchableOpacity>
           <TouchableOpacity
             style={[styles.tab, activeTab === 'active' && styles.activeTab]}
             onPress={() => setActiveTab('active')}
@@ -123,20 +201,19 @@ export default function QuestModal({ visible, onClose }: QuestModalProps) {
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.tab, activeTab === 'complete' && styles.activeTab]}
-            onPress={() => setActiveTab('complete')}
+            style={[styles.tab, activeTab === 'completed' && styles.activeTab]}
+            onPress={() => setActiveTab('completed')}
           >
-            <Text style={[styles.tabText, activeTab === 'complete' && styles.activeTabText]}>
-              Complete ({completeQuests.length})
+            <Text style={[styles.tabText, activeTab === 'completed' && styles.activeTabText]}>
+              Completed ({completedQuests.length})
             </Text>
           </TouchableOpacity>
         </View>
 
         <ScrollView style={styles.questList} showsVerticalScrollIndicator={false}>
-          {activeTab === 'active' 
-            ? activeQuests.map(renderQuestCard)
-            : completeQuests.map(renderQuestCard)
-          }
+          {activeTab === 'available' && availableQuests.map(quest => renderQuestCard(quest))}
+          {activeTab === 'active' && activeQuests.map(userQuest => renderQuestCard(userQuest.quest, userQuest))}
+          {activeTab === 'completed' && completedQuests.map(userQuest => renderQuestCard(userQuest.quest, userQuest))}
         </ScrollView>
       </SafeAreaView>
     </Modal>
@@ -256,5 +333,40 @@ const styles = StyleSheet.create({
     color: Colors.textInverse,
     fontSize: Typography.sm,
     fontWeight: Typography.semibold,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: Colors.textSecondary,
+  },
+  actionButton: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.round,
+  },
+  claimButton: {
+    backgroundColor: '#4CAF50',
+  },
+  claimedButton: {
+    backgroundColor: '#9E9E9E', // Gray for claimed quests
+  },
+  actionButtonText: {
+    color: Colors.textInverse,
+    fontSize: Typography.sm,
+    fontWeight: Typography.semibold,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  resetButton: {
+    padding: 8,
   },
 });

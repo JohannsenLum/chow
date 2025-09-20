@@ -31,34 +31,25 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
             setLoading(true);
 
             if (!user) {
-                console.error('No authenticated user found');
+                setUserProfile(null);
                 return;
             }
 
-            // Fetch user profile from database
-            const { data: userProfile, error } = await supabase
+            console.log('Loading profile for user:', user.id);
+
+            const { data, error } = await supabase
                 .from('users')
-                .select(`
-          id,
-          display_name,
-          bio,
-          avatar_url,
-          exp_points,
-          paw_points,
-          level
-        `)
+                .select('id, display_name, bio, avatar_url, exp_points, paw_points, level')
                 .eq('id', user.id)
                 .single();
 
             if (error) {
-                console.error('Error fetching user profile:', error);
+                console.error('Error loading profile:', error);
                 return;
             }
 
-            if (userProfile) {
-                console.log('Profile loaded:', userProfile);
-                setUserProfile(userProfile);
-            }
+            console.log('Profile loaded:', data);
+            setUserProfile(data);
         } catch (error) {
             console.error('Error loading profile:', error);
         } finally {
@@ -77,20 +68,44 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     };
 
     useEffect(() => {
+        loadUserProfile();
+    }, [user]);
+
+    // Listen for profile changes (like when quest rewards are claimed)
+    useEffect(() => {
         if (user) {
-            loadUserProfile();
+            const channel = supabase
+                .channel('profile_changes')
+                .on(
+                    'postgres_changes',
+                    {
+                        event: 'UPDATE',
+                        schema: 'public',
+                        table: 'users',
+                        filter: `id=eq.${user.id}`
+                    },
+                    (payload) => {
+                        console.log('Profile updated:', payload.new);
+                        setUserProfile(payload.new as UserProfile);
+                    }
+                )
+                .subscribe();
+
+            return () => {
+                supabase.removeChannel(channel);
+            };
         }
     }, [user]);
 
-    const value = {
-        userProfile,
-        loading,
-        refreshProfile,
-        updateProfile
-    };
-
     return (
-        <ProfileContext.Provider value={value}>
+        <ProfileContext.Provider
+            value={{
+                userProfile,
+                loading,
+                refreshProfile,
+                updateProfile,
+            }}
+        >
             {children}
         </ProfileContext.Provider>
     );
